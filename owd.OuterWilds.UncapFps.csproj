@@ -1,0 +1,103 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>8.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <!-- OWML paths -->
+  <PropertyGroup>
+    <OWMLFolder>C:\Users\etd\AppData\Roaming\OuterWildsModManager\OWML</OWMLFolder>
+    <ModsFolder>$(OWMLFolder)\Mods</ModsFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Game / Unity DLLs (from OWML, NOT game folder) -->
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(OWMLFolder)\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(OWMLFolder)\Assembly-CSharp-firstpass.dll</HintPath>
+    </Reference>
+
+    <Reference Include="UnityEngine">
+      <HintPath>$(OWMLFolder)\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(OWMLFolder)\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputModule">
+      <HintPath>$(OWMLFolder)\UnityEngine.InputModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(OWMLFolder)\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+
+    <!-- Harmony (same as before, but from OWML) -->
+    <Reference Include="0Harmony">
+      <HintPath>$(OWMLFolder)\0Harmony.dll</HintPath>
+    </Reference>
+
+    <!-- OWML -->
+    <Reference Include="OWML.ModHelper">
+      <HintPath>$(OWMLFolder)\OWML.ModHelper.dll</HintPath>
+    </Reference>
+    <Reference Include="OWML.Common">
+      <HintPath>$(OWMLFolder)\OWML.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="OWML.Abstractions">
+      <HintPath>$(OWMLFolder)\OWML.Abstractions.dll</HintPath>
+    </Reference>
+
+    <!-- Optional but often useful -->
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(OWMLFolder)\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MonoMod.RuntimeDetour.HookGen" Version="22.7.31.1" />
+  </ItemGroup>
+
+  <!-- Copy build output to OWML Mods folder -->
+  <Target Name="CopyToOWML" AfterTargets="Build" Condition="'$(ModsFolder)' != ''">
+
+    <!-- Kill OuterWilds if running and wait for exit -->
+    <Exec
+      Command="powershell -Command &quot;if (Get-Process -Name 'OuterWilds' -ErrorAction SilentlyContinue) { Stop-Process -Name 'OuterWilds' -Force -PassThru | Wait-Process }&quot;" />
+
+    <!-- Create mod folder -->
+    <MakeDir Directories="$(ModsFolder)\$(TargetName)" />
+
+    <!-- Copy DLL -->
+    <Copy
+      SourceFiles="$(TargetDir)$(TargetName).dll"
+      DestinationFolder="$(ModsFolder)\$(TargetName)"
+      OverwriteReadOnlyFiles="true" />
+
+    <!-- Copy manifest.json -->
+    <Copy
+      SourceFiles="manifest.json"
+      DestinationFolder="$(ModsFolder)\$(TargetName)"
+      SkipUnchangedFiles="true"
+      Condition="Exists('manifest.json')" />
+
+    <!-- Copy resources -->
+    <ItemGroup>
+      <ResourceFiles Include="rsc\**\*.*" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(ResourceFiles)"
+      DestinationFiles="@(ResourceFiles->'$(ModsFolder)\$(TargetName)\rsc\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+      OverwriteReadOnlyFiles="true" />
+
+    <!-- Launch the game AFTER everything is copied -->
+    <Exec
+      Command="powershell -Command &quot;Start-Process 'C:\game\OuterWilds\OuterWilds.exe'&quot;" />
+  </Target>
+
+</Project>
